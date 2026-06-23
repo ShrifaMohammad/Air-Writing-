@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Writing Pro</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: scaleX(-1);
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+        }
+        /* جعل الفيديو خلف الكانفاس وبشفافية بسيطة لرؤية الرسم بوضوح */
+        #video {
+            opacity: 0.4;
+        }
+        .ui-overlay {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 30px;
+            border: none;
+            background: #ffffff;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+        }
+        #status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: #00fbff;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 15px;
+            border: 1px solid #00fbff;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="status">جاري التحميل...</div>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui-overlay">
+        <button onclick="clearCanvas()" style="background: #ff4757; color: white;">🗑️ مسح</button>
+        <button onclick="saveImage()" style="background: #2ed573; color: white;">💾 حفظ</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusText = document.getElementById('status');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let lastX = 0;
+        let lastY = 0;
+        let lastTime = Date.now();
+        let colors = ["#00fbff", "#ff00ff", "#ffff00", "#00ff00", "#ff4500", "#ffffff"];
+        let colorIndex = 0;
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function saveImage() {
+            const link = document.createElement('a');
+            link.download = 'air-drawing.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.8,
+            minTrackingConfidence: 0.8
+        });
+
+        hands.onResults((results) => {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                
+                // حساب عدد الأصابع
+                const fingersUp = [8, 12, 16, 20].filter(i => landmarks[i].y < landmarks[i-2].y).length;
+                
+                const tip = landmarks[8];
+                const x = tip.x * canvas.width;
+                const y = tip.y * canvas.height;
+
+                if (fingersUp === 1) { // إصبع واحد = رسم
+                    statusText.innerText = "🖋️ رسم...";
+                    const now = Date.now();
+                    const dist = Math.hypot(x - lastX, y - lastY);
+                    const speed = dist / (now - lastTime || 1);
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = colors[colorIndex];
+                    ctx.lineWidth = Math.min(Math.max(speed * 15, 5), 30); // سماكة حسب السرعة
+                    ctx.lineCap = "round";
+                    ctx.shadowBlur = 25; // توهج نيون قوي
+                    ctx.shadowColor = colors[colorIndex];
+                    
+                    if (lastX !== 0) {
+                        ctx.moveTo(lastX, lastY);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                    }
+                    lastX = x;
+                    lastY = y;
+                    lastTime = now;
+                } 
+                else if (fingersUp === 2) { // إصبعين = مسح
+                    statusText.innerText = "✌️ مسح الشاشة";
+                    clearCanvas();
+                    lastX = 0;
+                }
+                else if (fingersUp === 3) { // 3 أصابع = تغيير لون
+                    colorIndex = (colorIndex + 1) % colors.length;
+                    statusText.innerText = "🎨 تغيير اللون";
+                    lastX = 0;
+                }
+                else if (fingersUp === 0) { // قبضة مغلقة = توقف
+                    statusText.innerText = "✊ توقف";
+                    lastX = 0;
+                }
+            } else {
+                statusText.innerText = "ضع يدك أمام الكاميرا";
+                lastX = 0;
+            }
+        });
+
+        const camera = new Camera(video, {
+            onFrame: async () => {
+                await hands.send({image: video});
+            },
+            width: 1280,
+            height: 720
+        });
+        camera.start();
+    </script>
+</body>
+</html>
