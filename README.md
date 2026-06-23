@@ -1,12 +1,7 @@
-# Air Writing Pro ✍️
+# Air Writing  ✍️
 
 Draw in the air using just your webcam and hand gestures — no mouse, no touchscreen, no stylus. Built with [MediaPipe Hands](https://developers.google.com/mediapipe/solutions/vision/hand_landmarker) for real-time hand tracking, running entirely in the browser.
 
-## Try it live
-
-🔗 **[Open Air Writing Pro](https://YOUR_USERNAME.github.io/air-writing-pro/)** *(enable GitHub Pages — see below — and put your link here)*
-
-Just allow camera access and hold up your index finger to start drawing.
 
 ## How it works
 
@@ -42,14 +37,6 @@ python3 -m http.server 8000
 ```
 
 Then open `http://localhost:8000` in your browser and allow camera access.
-
-## Deploy your own live demo (GitHub Pages)
-
-1. Push this repo to GitHub
-2. Go to **Settings → Pages**
-3. Under "Source", select the `main` branch and `/ (root)` folder
-4. Save — GitHub will give you a live URL (e.g. `https://YOUR_USERNAME.github.io/air-writing-pro/`) within a minute or two
-5. Update the "Try it live" link at the top of this README with your new URL
 
 ## What I'd improve next
 
